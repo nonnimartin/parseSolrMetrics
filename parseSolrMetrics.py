@@ -78,7 +78,7 @@ def create_docs(map, collection, node):
 
         if type(this_map) is dict:
             new_doc = dict()
-            new_doc['name']       = name
+            new_doc['name_s']       = name
             new_doc['collection'] = collection
 
             # add all dict keys to the doc
