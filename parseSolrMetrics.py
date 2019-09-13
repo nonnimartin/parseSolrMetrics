@@ -62,14 +62,16 @@ def grouper(docsPerSubmission, docObjects, padvalue=None):
     return zip(*[chain(docObjects, repeat(padvalue, docsPerSubmission - 1))]* docsPerSubmission)
 
 def create_docs(map, collection, node):
+
     docs_list = list()
+
     # take dictionary as map and iterate to create document objects
     for this_key in map.keys():
         name = this_key
         this_map = map[this_key]
         if type(this_map) is dict:
             new_doc = dict()
-            new_doc[name] = this_map
+            new_doc['name']       = name
             new_doc['collection'] = collection
 
             # add all dict keys to the doc
@@ -96,10 +98,11 @@ def create_docs(map, collection, node):
 def main():
 
     # get CLI args
-    cmd_args       = sys.argv
-    flag_commit    = False
-    flag_incl_node = False
-    file_path      = str()
+    cmd_args        = sys.argv
+    flag_commit     = False
+    flag_incl_node  = False
+    file_path       = str()
+    final_docs_list = list()
 
     # Go through CLI options, where argument value = cmd_args[opt + 1]
     for opt in range(len(cmd_args)):
@@ -136,17 +139,20 @@ def main():
             # solr.jvm should maybe be one big document
             if 'solr.jvm' in key:
                 solr_jvm_dict = file_metrics[key]
+                final_docs_list.append(solr_jvm_dict)
             # Make a flag for it to be created, parse like the others
             # but only if enabled by flag
             elif 'solr.node' in key and flag_incl_node:
                 solr_node_dic = file_metrics[key]
-                create_docs(solr_node_dic, key, None)
+                node_list = create_docs(solr_node_dic, key, None)
+                final_docs_list = final_docs_list + node_list
 
             # solr.jetty just skip
             elif 'solr.jetty' in key:
                 #print(key + ':')
                 #print(file_metrics[key])
                 pass
+        print(final_docs_list)
 
     # THE PLAN WILL BE TO CREATE DOCUMENTS FOR EACH STATS ELEMENT LIKE "ADMIN./..." AND THEN
     # ADD A FIELD FOR THE COLLECTION NAME, NODE ETC.
