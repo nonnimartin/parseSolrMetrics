@@ -59,6 +59,7 @@ def update_collection(endpoint, docsJson):
     print("Response status code: " + str(r.status_code))
     print("")
     print("=============================================================")
+    print("")
 
 def grouper(docsPerSubmission, docObjects, padvalue=None):
     # group sets of objects into arrays of chosen length
@@ -114,7 +115,7 @@ def main():
     hostname = configMap['hostname']
     protocol = configMap['protocol']
     port = configMap['port']
-    collection = configMap['collection']
+    destination_collection = configMap['collection']
     docsPerSub = configMap['docsPerSubmission']
 
     # Go through CLI options, where argument value = cmd_args[opt + 1]
@@ -171,7 +172,7 @@ def main():
 
         #serialize list of docs to json
         thisPayload  = json.dumps(thisGroup)
-        thisEndpoint = protocol + '://' + hostname + ':' + str(port) + '/solr/' + collection + '/update?commit=' + first_lower(str(commit))
+        thisEndpoint = protocol + '://' + hostname + ':' + str(port) + '/solr/' + destination_collection + '/update?commit=' + first_lower(str(commit))
         #iterate progress bar
         update_collection(thisEndpoint, thisPayload)
 
