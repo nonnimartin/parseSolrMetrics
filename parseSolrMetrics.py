@@ -15,28 +15,32 @@ def read_file_to_string(filePath):
     f = open(filePath, "r")
     return f.read()
 
-def make_new_json_obj(idInt, numFields, startNum):
-    # construct json object for update to solr
-    thisMap = {}
-    thisMap['id'] = idInt
-
-    for field in range(numFields):
-        thisMap['x-manyFieldsTest-' + hex(startNum)] = 'x-manyFieldsTest-' + hex(startNum)
-        startNum += 1
-
-    idInt += 1
-
-    return thisMap
-
-
 def get_config_map(filePath):
     # read configuration file to map
 
     return json.loads(read_file_to_string(filePath))
 
-def update_collection(endpoint, docsJson):
-    # create and send http request to desired endpoint
+def remove_null_values(thisList):
+    #remove all null values from list
 
+    newList = list()
+    for i in thisList:
+        if i is not None:
+            newList.append(i)
+
+    return newList
+
+def first_lower(s):
+   #make first letter of string lowercase
+
+   if len(s) == 0:
+      return s
+   else:
+      return s[0].lower() + s[1:]
+
+def update_collection(endpoint, docsJson):
+
+    # create and send http request to desired endpoint
     headersObj = {'content-type': 'application/json'}
 
     print('sending data to endpoint with ' + str(len(json.loads(docsJson))) + ' documents')
@@ -67,8 +71,10 @@ def create_docs(map, collection, node):
 
     # take dictionary as map and iterate to create document objects
     for this_key in map.keys():
+
         name = this_key
         this_map = map[this_key]
+
         if type(this_map) is dict:
             new_doc = dict()
             new_doc['name']       = name
@@ -103,6 +109,13 @@ def main():
     flag_incl_node  = False
     file_path       = str()
     final_docs_list = list()
+    configMap = get_config_map('./config.json')
+
+    hostname = configMap['hostname']
+    protocol = configMap['protocol']
+    port = configMap['port']
+    collection = configMap['collection']
+    docsPerSub = configMap['docsPerSubmission']
 
     # Go through CLI options, where argument value = cmd_args[opt + 1]
     for opt in range(len(cmd_args)):
@@ -116,25 +129,24 @@ def main():
             # set to include Solr.node
             flag_incl_node = True
 
+    #flag -c commit overrides config
+    if flag_commit:
+        commit = True
+    else:
+        commit = configMap['commit']
+
     file_json    = read_file_to_string(file_path)
     file_obj     = json.loads(file_json)
     # make map of metrics
     file_metrics = file_obj['metrics']
     metrics_keys = file_metrics.keys()
-    # maybe make this a dict with a key for each collection
-    collections_dict = dict()
 
     for key in metrics_keys:
         if len(key.split('.')) > 2:
-            collection_name = key.split('.')[2]
-            # if collection already has entry, add to it, otherwise create
-            this_node = {key: file_metrics[key]}
-            if collection_name in collections_dict.keys():
-                current_nodes_dict                = collections_dict[collection_name]
-                current_nodes_dict[key]           = this_node
-                collections_dict[collection_name] = current_nodes_dict
-            else:
-                collections_dict[collection_name] = this_node
+            collection = key.split('.')[2]
+            node       = key
+            new_dict_list = create_docs(file_metrics[key], collection, node)
+            final_docs_list = final_docs_list + new_dict_list
         else:
             # solr.jvm should maybe be one big document
             if 'solr.jvm' in key:
@@ -146,26 +158,23 @@ def main():
                 solr_node_dic = file_metrics[key]
                 node_list = create_docs(solr_node_dic, key, None)
                 final_docs_list = final_docs_list + node_list
-
             # solr.jetty just skip
             elif 'solr.jetty' in key:
-                #print(key + ':')
-                #print(file_metrics[key])
                 pass
-        print(final_docs_list)
 
-    # THE PLAN WILL BE TO CREATE DOCUMENTS FOR EACH STATS ELEMENT LIKE "ADMIN./..." AND THEN
-    # ADD A FIELD FOR THE COLLECTION NAME, NODE ETC.
+    #group lists of documents by submit size
+    groupedList = list(grouper(docsPerSub, final_docs_list))
 
+    for group in groupedList:
+        #remove any null values from group
+        thisGroup = remove_null_values(group)
 
-    # pp = pprint.PrettyPrinter(indent=4)
-    # pp.pprint(collections_dict)
+        #serialize list of docs to json
+        thisPayload  = json.dumps(thisGroup)
+        thisEndpoint = protocol + '://' + hostname + ':' + str(port) + '/solr/' + collection + '/update?commit=' + first_lower(str(commit))
+        #iterate progress bar
+        update_collection(thisEndpoint, thisPayload)
 
-
-    # for i in metrics_keys:
-    #     print(i + ':')
-    #     print("")
-    #     print(file_metrics[i])
 
 if __name__ == '__main__':
     main()
