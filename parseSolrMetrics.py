@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-f", help="Specify Solr Metrics JSON File", required=True)
 parser.add_argument("-c", action='store_true', help="Flag to commit to Solr", required=False)
 parser.add_argument("-n", action='store_true', help="Flag to include Solr.Node Document", required=False)
+parser.add_argument("-t", help="Tag all documents with some text", required=False)
 args = parser.parse_args()
 
 def read_file_to_string(filePath):
@@ -66,7 +67,7 @@ def grouper(docsPerSubmission, docObjects, padvalue=None):
 
     return zip(*[chain(docObjects, repeat(padvalue, docsPerSubmission - 1))]* docsPerSubmission)
 
-def create_docs(map, collection, node):
+def create_docs(map, collection, node, tag):
 
     docs_list = list()
 
@@ -78,7 +79,9 @@ def create_docs(map, collection, node):
 
         if type(this_map) is dict:
             new_doc = dict()
-            new_doc['name_s']       = name
+            if tag != '':
+                new_doc['tag']    = tag
+            new_doc['name_s']     = name
             new_doc['collection'] = collection
 
             # add all dict keys to the doc
@@ -94,6 +97,8 @@ def create_docs(map, collection, node):
             # this is just a single key value pair
             # this_key is the key and this_map is the value
             new_doc = dict()
+            if tag != '':
+                new_doc['tag']    = tag
             new_doc['collection'] = collection
             new_doc[this_key]     = this_map
             docs_list.append(new_doc)
@@ -110,6 +115,7 @@ def main():
     flag_incl_node  = False
     file_path       = str()
     final_docs_list = list()
+    tag_value       = str()
     configMap = get_config_map('./config.json')
 
     hostname = configMap['hostname']
@@ -129,6 +135,8 @@ def main():
         if cmd_args[opt] == '-n':
             # set to include Solr.node
             flag_incl_node = True
+        if cmd_args[opt] == '-t':
+            tag_value = cmd_args[opt + 1]
 
     #flag -c commit overrides config
     if flag_commit:
@@ -146,18 +154,19 @@ def main():
         if len(key.split('.')) > 2:
             collection = key.split('.')[2]
             node       = key
-            new_dict_list = create_docs(file_metrics[key], collection, node)
+            new_dict_list = create_docs(file_metrics[key], collection, node, tag_value)
             final_docs_list = final_docs_list + new_dict_list
         else:
             # solr.jvm should maybe be one big document
             if 'solr.jvm' in key:
                 solr_jvm_dict = file_metrics[key]
+                solr_jvm_dict['tag'] = tag_value
                 final_docs_list.append(solr_jvm_dict)
             # Make a flag for it to be created, parse like the others
             # but only if enabled by flag
             elif 'solr.node' in key and flag_incl_node:
                 solr_node_dic = file_metrics[key]
-                node_list = create_docs(solr_node_dic, key, None)
+                node_list = create_docs(solr_node_dic, key, None, tag_value)
                 final_docs_list = final_docs_list + node_list
             # solr.jetty just skip
             elif 'solr.jetty' in key:
