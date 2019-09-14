@@ -3,6 +3,6 @@
     "protocol":"http",
     "port": 8983,
     "collection" : "test",
-    "docsPerSubmission" : 1,
+    "docsPerSubmission" : 100,
     "commit": true
 }

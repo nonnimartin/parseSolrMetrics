@@ -103,7 +103,7 @@ def create_docs(map, collection, node, tag):
                 new_doc[sub_key] = this_map[sub_key]
 
             if node != None:
-                new_doc['node'] = node
+                new_doc['node']  = node
 
             docs_list.append(new_doc)
 
@@ -130,13 +130,13 @@ def main():
     file_path       = str()
     final_docs_list = list()
     tag_value       = str()
-    configMap = get_config_map('./config.json')
+    configMap       = get_config_map('./config.json')
 
-    hostname = configMap['hostname']
-    protocol = configMap['protocol']
-    port = configMap['port']
+    hostname               = configMap['hostname']
+    protocol               = configMap['protocol']
+    port                   = configMap['port']
     destination_collection = configMap['collection']
-    docsPerSub = configMap['docsPerSubmission']
+    docsPerSub             = configMap['docsPerSubmission']
 
     # Go through CLI options, where argument value = cmd_args[opt + 1]
     for opt in range(len(cmd_args)):
@@ -145,12 +145,12 @@ def main():
             flag_commit = True
         if cmd_args[opt] == '-f':
             # set file to parse
-            file_path = cmd_args[opt + 1]
+            file_path   = cmd_args[opt + 1]
         if cmd_args[opt] == '-n':
             # set to include Solr.node
             flag_incl_node = True
         if cmd_args[opt] == '-t':
-            tag_value = cmd_args[opt + 1]
+            tag_value   = cmd_args[opt + 1]
 
     #flag -c commit overrides config
     if flag_commit:
@@ -166,9 +166,9 @@ def main():
 
     for key in metrics_keys:
         if len(key.split('.')) > 2:
-            collection = key.split('.')[2]
-            node       = key
-            new_dict_list = create_docs(file_metrics[key], collection, node, tag_value)
+            collection      = key.split('.')[2]
+            node            = key
+            new_dict_list   = create_docs(file_metrics[key], collection, node, tag_value)
             final_docs_list = final_docs_list + new_dict_list
         else:
             # solr.jvm should maybe be one big document
