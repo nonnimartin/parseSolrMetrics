@@ -3,7 +3,8 @@ import json
 from itertools import chain, repeat
 import sys
 import argparse
-import pprint
+import aiohttp
+import asyncio
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", help="Specify Solr Metrics JSON File", required=True)
@@ -66,6 +67,19 @@ def grouper(docsPerSubmission, docObjects, padvalue=None):
     # group sets of objects into arrays of chosen length
 
     return zip(*[chain(docObjects, repeat(padvalue, docsPerSubmission - 1))]* docsPerSubmission)
+
+async def async_write_docs(url, docs_list):
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        tasks.append(post(session, url, docs_list))
+        response = await asyncio.gather(*tasks)
+
+async def post(session, url, data):
+    async with session.post(url, json=data) as response:
+        print('sending request to ' + url + ' with response:')
+        print(response)
+        print('Data = ' + str(data))
+        return await response.text()
 
 def create_docs(map, collection, node, tag):
 
@@ -182,8 +196,12 @@ def main():
         #serialize list of docs to json
         thisPayload  = json.dumps(thisGroup)
         thisEndpoint = protocol + '://' + hostname + ':' + str(port) + '/solr/' + destination_collection + '/update?commit=' + first_lower(str(commit))
-        #iterate progress bar
-        update_collection(thisEndpoint, thisPayload)
+
+        # commenting out for async version
+        # update_collection(thisEndpoint, thisPayload)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(async_write_docs(thisEndpoint, thisPayload))
+
 
 
 if __name__ == '__main__':
