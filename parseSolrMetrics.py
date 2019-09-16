@@ -40,29 +40,6 @@ def first_lower(s):
    else:
       return s[0].lower() + s[1:]
 
-def update_collection(endpoint, docsJson):
-
-    # create and send http request to desired endpoint
-    headersObj = {'content-type': 'application/json'}
-
-    print('sending data to endpoint with ' + str(len(json.loads(docsJson))) + ' documents')
-
-    for i in range(0, 100):
-        print('Making request. Trying ' + str(i + 1) + ' times.')
-        try:
-            r = requests.post(endpoint, data=docsJson, headers=headersObj)
-            r.raise_for_status()
-        except requests.exceptions.HTTPError as err:
-            print(err)
-            continue
-        break
-
-    print("Sent data to endpoint: " + endpoint)
-    print("Response status code: " + str(r.status_code))
-    print("")
-    print("=============================================================")
-    print("")
-
 def grouper(docsPerSubmission, docObjects, padvalue=None):
     # group sets of objects into arrays of chosen length
 
@@ -195,8 +172,7 @@ def main():
         thisPayload  = json.dumps(thisGroup)
         thisEndpoint = protocol + '://' + hostname + ':' + str(port) + '/solr/' + destination_collection + '/update?commit=' + first_lower(str(commit))
 
-        # commenting out for async version
-        # update_collection(thisEndpoint, thisPayload)
+        # write to Solr with asyncio
         loop = asyncio.get_event_loop()
         loop.run_until_complete(async_write_docs(thisEndpoint, thisPayload))
 
