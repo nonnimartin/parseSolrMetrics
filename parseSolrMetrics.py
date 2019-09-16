@@ -75,10 +75,8 @@ async def async_write_docs(url, docs_list):
         response = await asyncio.gather(*tasks)
 
 async def post(session, url, data):
-    async with session.post(url, json=data) as response:
-        print('sending request to ' + url + ' with response:')
+    async with session.post(url, data=data, headers={'Content-type': 'application/json'}) as response:
         print(response)
-        print('Data = ' + str(data))
         return await response.text()
 
 def create_docs(map, collection, node, tag):
