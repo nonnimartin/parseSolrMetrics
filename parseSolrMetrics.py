@@ -104,19 +104,19 @@ def create_docs(map, collection, node, tag):
 
 def main():
     # get CLI args
-    cmd_args = sys.argv
-    flag_commit = False
-    flag_incl_node = False
-    file_path = str()
+    cmd_args        = sys.argv
+    flag_commit     = False
+    flag_incl_node  = False
+    file_path       = str()
     final_docs_list = list()
-    tag_value = str()
-    configMap = get_config_map('./config.json')
+    tag_value       = str()
+    configMap       = get_config_map('./config.json')
 
-    hostname = configMap['hostname']
-    protocol = configMap['protocol']
-    port = configMap['port']
+    hostname               = configMap['hostname']
+    protocol               = configMap['protocol']
+    port                   = configMap['port']
     destination_collection = configMap['collection']
-    docs_per_sub = configMap['docsPerSubmission']
+    docs_per_sub           = configMap['docsPerSubmission']
 
     # Go through CLI options, where argument value = cmd_args[opt + 1]
     for opt in range(len(cmd_args)):
@@ -139,28 +139,28 @@ def main():
         commit = configMap['commit']
 
     file_json = read_file_to_string(file_path)
-    file_obj = json.loads(file_json)
+    file_obj  = json.loads(file_json)
     # make map of metrics
     file_metrics = file_obj['metrics']
     metrics_keys = file_metrics.keys()
 
     for key in metrics_keys:
         if len(key.split('.')) > 2:
-            collection = key.split('.')[2]
-            node = key
-            new_dict_list = create_docs(file_metrics[key], collection, node, tag_value)
+            collection      = key.split('.')[2]
+            node            = key
+            new_dict_list   = create_docs(file_metrics[key], collection, node, tag_value)
             final_docs_list = final_docs_list + new_dict_list
         else:
             # solr.jvm should maybe be one big document
             if 'solr.jvm' in key:
-                solr_jvm_dict = file_metrics[key]
+                solr_jvm_dict        = file_metrics[key]
                 solr_jvm_dict['tag'] = tag_value
                 final_docs_list.append(solr_jvm_dict)
             # Make a flag for it to be created, parse like the others
             # but only if enabled by flag
             elif 'solr.node' in key and flag_incl_node:
-                solr_node_dic = file_metrics[key]
-                node_list = create_docs(solr_node_dic, key, None, tag_value)
+                solr_node_dic   = file_metrics[key]
+                node_list       = create_docs(solr_node_dic, key, None, tag_value)
                 final_docs_list = final_docs_list + node_list
             # solr.jetty just skip
             elif 'solr.jetty' in key:
@@ -174,7 +174,7 @@ def main():
         thisGroup = remove_null_values(group)
 
         # serialize list of docs to json
-        thisPayload = json.dumps(thisGroup)
+        thisPayload  = json.dumps(thisGroup)
         thisEndpoint = protocol + '://' + hostname + ':' + str(
             port) + '/solr/' + destination_collection + '/update?commit=' + first_lower(str(commit))
 
