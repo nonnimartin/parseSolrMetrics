@@ -196,7 +196,7 @@ def main():
             # remove trailing slash if needed
             if url.endswith('/'):
                 url = url[:-1]
-            this_endpoint = url + '/solr/' + destination_collection + '/update?commit' + first_lower(str(commit))
+            this_endpoint = url + '/solr/' + destination_collection + '/update?commit=' + first_lower(str(commit))
         else:
             this_endpoint = protocol + '://' + hostname + ':' + str(
             port) + '/solr/' + destination_collection + '/update?commit=' + first_lower(str(commit))
