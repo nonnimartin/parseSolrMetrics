@@ -9,6 +9,8 @@ import asyncio
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", help="Specify Solr Metrics JSON File", required=True)
 parser.add_argument("-c", action='store_true', help="Flag to commit to Solr", required=False)
+parser.add_argument("-C", help="Flag to specify the collection", required=False)
+parser.add_argument("-u", help="Flag to specify the URL serving Solr. Format like this: http://<SOLR_HOST>:<SOLR_PORT> Specify the collection using the -C flag if you use this option", required=False)
 parser.add_argument("-n", action='store_true', help="Flag to include Solr.Node Document", required=False)
 parser.add_argument("-t", help="Tag all documents with some text", required=False)
 args = parser.parse_args()
@@ -110,6 +112,7 @@ def main():
     file_path       = str()
     final_docs_list = list()
     tag_value       = str()
+    url             = str()
     configMap       = get_config_map('./config.json')
 
     hostname               = configMap['hostname']
@@ -117,6 +120,7 @@ def main():
     port                   = configMap['port']
     destination_collection = configMap['collection']
     docs_per_sub           = configMap['docsPerSubmission']
+    cli_collection         = str()
 
     # Go through CLI options, where argument value = cmd_args[opt + 1]
     for opt in range(len(cmd_args)):
@@ -131,6 +135,18 @@ def main():
             flag_incl_node = True
         if cmd_args[opt] == '-t':
             tag_value = cmd_args[opt + 1]
+        if cmd_args[opt] == '-u':
+            url = cmd_args[opt + 1]
+        if cmd_args[opt] == '-C':
+            # represents the presence of CLI since destination collection will usually be set by config
+            cli_collection         = cmd_args[opt + 1]
+            destination_collection = cmd_args[opt + 1]
+
+    # require the user specify a collection if using the url param, or and vice versa
+    if (url != '' and cli_collection == '') or (url == '' and cli_collection != ''):
+        print('If URL is specified with CL argument, then collection must be set with -C flag, and vice versa')
+        print('Exiting')
+        exit()
 
     # flag -c commit overrides config
     if flag_commit:
@@ -175,12 +191,19 @@ def main():
 
         # serialize list of docs to json
         thisPayload  = json.dumps(thisGroup)
-        thisEndpoint = protocol + '://' + hostname + ':' + str(
+
+        if url != '':
+            # remove trailing slash if needed
+            if url.endswith('/'):
+                url = url[:-1]
+            this_endpoint = url + '/solr/' + destination_collection + '/update?commit' + first_lower(str(commit))
+        else:
+            this_endpoint = protocol + '://' + hostname + ':' + str(
             port) + '/solr/' + destination_collection + '/update?commit=' + first_lower(str(commit))
 
         # write to Solr with asyncio
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(async_write_docs(thisEndpoint, thisPayload))
+        loop.run_until_complete(async_write_docs(this_endpoint, thisPayload))
 
 
 if __name__ == '__main__':
