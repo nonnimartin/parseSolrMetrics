@@ -1,4 +1,3 @@
-import requests
 import json
 from itertools import chain, repeat
 import sys
