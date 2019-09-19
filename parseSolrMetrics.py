@@ -7,9 +7,10 @@ import asyncio
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", help="Specify Solr Metrics JSON File", required=True)
+parser.add_argument("-v", help="Specify the major version number for Solr. This will be stored in the version field in the collection", required=True)
 parser.add_argument("-c", action='store_true', help="Flag to commit to Solr", required=False)
-parser.add_argument("-C", help="Flag to specify the collection", required=False)
-parser.add_argument("-u", help="Flag to specify the URL serving Solr. Format like this: http://<SOLR_HOST>:<SOLR_PORT> Specify the collection using the -C flag if you use this option", required=False)
+parser.add_argument("-C", help="Specify the collection as an argument", required=False)
+parser.add_argument("-u", help="Specify the URL serving Solr as an argument. Format like this: http://<SOLR_HOST>:<SOLR_PORT> Specify the collection using the -C flag if you use this option", required=False)
 parser.add_argument("-n", action='store_true', help="Flag to include Solr.Node Document", required=False)
 parser.add_argument("-t", help="Tag all documents with some text", required=False)
 args = parser.parse_args()
@@ -65,7 +66,7 @@ async def post(session, url, data):
         return await response.text()
 
 
-def create_docs(map, collection, node, tag):
+def create_docs(map, collection, node, tag, version):
     docs_list = list()
 
     # take dictionary as map and iterate to create document objects
@@ -78,8 +79,9 @@ def create_docs(map, collection, node, tag):
             new_doc = dict()
             if tag != '':
                 new_doc['tag'] = tag
-            new_doc['name_s'] = name
+            new_doc['name_s']       = name
             new_doc['collection_s'] = collection
+            new_doc['version_s']    = version
 
             # add all dict keys to the doc
             for sub_key in this_map.keys():
@@ -97,7 +99,8 @@ def create_docs(map, collection, node, tag):
             if tag != '':
                 new_doc['tag'] = tag
             new_doc['collection_s'] = collection
-            new_doc[this_key] = this_map
+            new_doc['version_s']    = version
+            new_doc[this_key]       = this_map
             docs_list.append(new_doc)
 
     return docs_list
@@ -112,6 +115,7 @@ def main():
     final_docs_list = list()
     tag_value       = str()
     url             = str()
+    version         = str()
     configMap       = get_config_map('./config.json')
 
     hostname               = configMap['hostname']
@@ -140,6 +144,8 @@ def main():
             # represents the presence of CLI since destination collection will usually be set by config
             cli_collection         = cmd_args[opt + 1]
             destination_collection = cmd_args[opt + 1]
+        if cmd_args[opt] == '-v':
+            version = cmd_args[opt + 1]
 
     # require the user specify a collection if using the url param, or and vice versa
     if (url != '' and cli_collection == '') or (url == '' and cli_collection != ''):
@@ -163,7 +169,7 @@ def main():
         if len(key.split('.')) > 2:
             collection      = key.split('.')[2]
             node            = key
-            new_dict_list   = create_docs(file_metrics[key], collection, node, tag_value)
+            new_dict_list   = create_docs(file_metrics[key], collection, node, tag_value, version)
             final_docs_list = final_docs_list + new_dict_list
         else:
             # solr.jvm should maybe be one big document
@@ -175,7 +181,7 @@ def main():
             # but only if enabled by flag
             elif 'solr.node' in key and flag_incl_node:
                 solr_node_dic   = file_metrics[key]
-                node_list       = create_docs(solr_node_dic, key, None, tag_value)
+                node_list       = create_docs(solr_node_dic, key, None, tag_value, version)
                 final_docs_list = final_docs_list + node_list
             # solr.jetty just skip
             elif 'solr.jetty' in key:
