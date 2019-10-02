@@ -15,6 +15,18 @@ parser.add_argument("-n", action='store_true', help="Flag to include Solr.Node D
 parser.add_argument("-t", help="Tag all documents with some text", required=False)
 args = parser.parse_args()
 
+# global dict mapping of fields to their type
+field_type_dict = dict()
+
+# dict mapping field types to field name suffixes
+type_to_suffix_dict = {
+    "text_general": "_t",
+    "string": "_s",
+    "pdouble": "_d",
+    "plong": "_l",
+    "boolean": "_b",
+    "text": "_t"
+}
 
 def read_file_to_string(file_path):
     f = open(file_path, "r")
@@ -78,17 +90,22 @@ def create_docs(map, collection, node, tag, version):
         if type(this_map) is dict:
             new_doc = dict()
             if tag != '':
-                new_doc['tag'] = tag
-            new_doc['name_s']       = name
-            new_doc['collection_s'] = collection
-            new_doc['version_s']    = version
+                new_doc['tag' + type_to_suffix_dict[field_type_dict['tag']]] = tag
+
+            new_doc['name' + type_to_suffix_dict[field_type_dict['name']]]             = name
+            new_doc['collection' + type_to_suffix_dict[field_type_dict['collection']]] = collection
+            new_doc['version' + type_to_suffix_dict[field_type_dict['version']]]       = version
 
             # add all dict keys to the doc
             for sub_key in this_map.keys():
-                new_doc[sub_key] = this_map[sub_key]
+                # if key is value, don't force type, otherwise use config for type
+                if sub_key == 'value':
+                    new_doc['value'] = this_map[sub_key]
+                else:
+                    new_doc[sub_key + type_to_suffix_dict[field_type_dict[sub_key]]]  = this_map[sub_key]
 
             if node != None:
-                new_doc['node'] = node
+                new_doc['node' + type_to_suffix_dict[field_type_dict['node']]] = node
 
             docs_list.append(new_doc)
 
@@ -97,9 +114,9 @@ def create_docs(map, collection, node, tag, version):
             # this_key is the key and this_map is the value
             new_doc = dict()
             if tag != '':
-                new_doc['tag'] = tag
-            new_doc['collection_s'] = collection
-            new_doc['version_s']    = version
+                new_doc['tag' + type_to_suffix_dict[field_type_dict['tag']]] = tag
+            new_doc['collection' + type_to_suffix_dict[field_type_dict['collection']]] = collection
+            new_doc['version' + type_to_suffix_dict[field_type_dict['version']]]    = version
             new_doc[this_key]       = this_map
             docs_list.append(new_doc)
 
@@ -116,14 +133,19 @@ def main():
     tag_value       = str()
     url             = str()
     version         = str()
-    configMap       = get_config_map('./config.json')
 
+    configMap       = get_config_map('./config.json')
     hostname               = configMap['hostname']
     protocol               = configMap['protocol']
     port                   = configMap['port']
     destination_collection = configMap['collection']
     docs_per_sub           = configMap['docsPerSubmission']
+    field_type_list       = configMap['field_types']
     cli_collection         = str()
+
+    # loop through field types from config and map field name to field type
+    for field_map in field_type_list:
+        field_type_dict[field_map['name']] = field_map['type']
 
     # Go through CLI options, where argument value = cmd_args[opt + 1]
     for opt in range(len(cmd_args)):
@@ -175,7 +197,7 @@ def main():
             # solr.jvm should maybe be one big document
             if 'solr.jvm' in key:
                 solr_jvm_dict        = file_metrics[key]
-                solr_jvm_dict['tag'] = tag_value
+                solr_jvm_dict['tag' + type_to_suffix_dict[field_type_dict['tag']]] = tag_value
                 final_docs_list.append(solr_jvm_dict)
             # Make a flag for it to be created, parse like the others
             # but only if enabled by flag
