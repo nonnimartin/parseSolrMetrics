@@ -2,7 +2,7 @@
     "hostname":"localhost",
     "protocol":"http",
     "port": 8983,
-    "collection" : "testScript2",
+    "collection" : "test_metrics",
     "docsPerSubmission" : 100,
     "commit": true,
     "field_types": [{
@@ -176,6 +176,11 @@
     {
       "name":"GET_TOP_IDS",
       "type":"plong"},
+    {
+      "name":"GET_TERM_STATS",
+      "type":"text_general"},
+    {"name":"SET_TERM_STATS",
+     "type": "text_general"},
     {
       "name":"HIGHLIGHTER.SolrBoundaryScanner.breakIterator.requests",
       "type":"plong"},
